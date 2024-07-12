@@ -5,7 +5,7 @@ authors = ["The Cloud Hypervisor Authors"]
 edition = "2021"
 
 [features]
-default = []
+default = ["tracing-relative"]
 dbus_api = ["blocking", "futures", "zbus"]
 guest_debug = ["kvm", "gdbstub", "gdbstub_arch"]
 igvm = ["hex", "igvm_parser", "igvm_defs",  "mshv-bindings", "range_map_vec"]
@@ -15,6 +15,7 @@ mshv = ["hypervisor/mshv", "vfio-ioctls/mshv", "vm-device/mshv", "pci/mshv"]
 sev_snp = ["arch/sev_snp", "hypervisor/sev_snp"]
 tdx = ["arch/tdx", "hypervisor/tdx"]
 tracing = ["tracer/tracing"]
+tracing-relative = ["tracer/tracing-relative"]
 
 [dependencies]
 acpi_tables = { git = "https://github.com/rust-vmm/acpi_tables", branch = "main"  }

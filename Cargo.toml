@@ -46,6 +46,7 @@ thiserror = "1.0.52"
 tpm = { path = "tpm"}
 tracer = { path = "tracer" }
 vmm = { path = "vmm" }
+virtio-devices = { path = "virtio-devices" }
 vmm-sys-util = "0.12.1"
 vm-memory = "0.14.0"
 zbus = { version = "3.11.1", optional = true }
@@ -77,6 +78,7 @@ mshv = ["vmm/mshv"]
 sev_snp = ["igvm", "vmm/sev_snp", "mshv"]
 tdx = ["vmm/tdx"]
 tracing = ["vmm/tracing", "tracer/tracing"]
+tracing-relative = ["virtio-devices/tracing-relative"]
 
 [workspace]
 members = [

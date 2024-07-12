@@ -76,6 +76,7 @@ use std::result;
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
 use tracer::trace_scoped;
+//use tracer::trace_relative_scoped;
 use vfio_ioctls::{VfioContainer, VfioDevice, VfioDeviceFd};
 use virtio_devices::transport::VirtioTransport;
 use virtio_devices::transport::{VirtioPciDevice, VirtioPciDeviceActivator};
@@ -3132,7 +3133,7 @@ impl DeviceManager {
 
     fn make_virtio_mem_devices(&mut self) -> DeviceManagerResult<Vec<MetaVirtioDevice>> {
         let mut devices = Vec::new();
-
+        tracer::start_relative();
         let mm = self.memory_manager.clone();
         let mut mm = mm.lock().unwrap();
         for (memory_zone_id, memory_zone) in mm.memory_zones_mut().iter_mut() {
@@ -4979,7 +4980,7 @@ impl Drop for DeviceManager {
         for handle in self.virtio_devices.drain(..) {
             handle.virtio_device.lock().unwrap().shutdown();
         }
-
+        tracer::end_relative();
         if let Some(termios) = *self.original_termios_opt.lock().unwrap() {
             // SAFETY: FFI call
             let _ = unsafe { tcsetattr(stdout().lock().as_raw_fd(), TCSANOW, &termios) };

@@ -45,6 +45,7 @@ use vm_migration::{
     Migratable, MigratableError, Pausable, Snapshot, Snapshottable, Transportable, VersionMapped,
 };
 use vmm_sys_util::eventfd::EventFd;
+use tracer::trace_relative_scoped;
 
 const QUEUE_SIZE: u16 = 128;
 const QUEUE_SIZES: &[u16] = &[QUEUE_SIZE];
@@ -415,6 +416,7 @@ struct MemEpollHandler {
 
 impl MemEpollHandler {
     fn discard_memory_range(&self, offset: u64, size: u64) -> Result<(), Error> {
+        trace_relative_scoped!("discard_memory_range", size);
         // Use fallocate if the memory region is backed by a file.
         if let Some(fd) = self.host_fd {
             // SAFETY: FFI call with valid arguments
@@ -636,10 +638,10 @@ impl MemEpollHandler {
         paused: Arc<AtomicBool>,
         paused_sync: Arc<Barrier>,
     ) -> result::Result<(), EpollHelperError> {
+
         let mut helper = EpollHelper::new(&self.kill_evt, &self.pause_evt)?;
         helper.add_event(self.queue_evt.as_raw_fd(), QUEUE_AVAIL_EVENT)?;
         helper.run(paused, paused_sync, self)?;
-
         Ok(())
     }
 }
@@ -676,6 +678,7 @@ impl EpollHelperHandler for MemEpollHandler {
                 )));
             }
         }
+
         Ok(())
     }
 }
@@ -898,6 +901,8 @@ impl Mem {
 
 impl Drop for Mem {
     fn drop(&mut self) {
+        //tracer::end_relative();
+
         if let Some(kill_evt) = self.common.kill_evt.take() {
             // Ignore the result because there is nothing we can do about it.
             let _ = kill_evt.write(1);
@@ -933,6 +938,7 @@ impl VirtioDevice for Mem {
         interrupt_cb: Arc<dyn VirtioInterrupt>,
         mut queues: Vec<(usize, Queue, EventFd)>,
     ) -> ActivateResult {
+        //tracer::start_relative();
         self.common.activate(&queues, &interrupt_cb)?;
         let (kill_evt, pause_evt) = self.common.dup_eventfds();
 
