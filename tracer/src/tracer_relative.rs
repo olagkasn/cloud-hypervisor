@@ -102,9 +102,10 @@ static mut TRACER: OnceCell<Tracer> = OnceCell::new();
 struct TraceEvent {
     timestamp: Duration,
     event: &'static str,
-    end_timestamp: Option<Duration>,
+    end_timestamp: u128,
     depth: u64,
     size: Option<u64>,
+    plug: Option<bool>
 }
 
 pub fn trace_point_log(event: &'static str) {
@@ -112,10 +113,11 @@ pub fn trace_point_log(event: &'static str) {
         // SAFETY: start has been initialised as part of initialising the value of TRACER
         timestamp: Instant::now().duration_since(unsafe { TRACER.get().unwrap().start }),
         event,
-        end_timestamp: None,
+        end_timestamp: 0,
         // SAFETY: thread_depth accesses current thread only specific data
         depth: unsafe { TRACER.get().unwrap().thread_depth() },
         size: None,
+        plug: None
     };
     // SAFETY: add_event accesses current thread only specific data
     unsafe {
@@ -127,10 +129,11 @@ pub struct TraceBlock {
     start: Instant,
     event: &'static str,
     size: u64,
+    plug: bool
 }
 
 impl TraceBlock {
-    pub fn new(event: &'static str, size: u64) -> Self {
+    pub fn new(event: &'static str, size: u64, plug: bool) -> Self {
         // SAFETY: increase_thread_depth accesses current thread only specific data
         unsafe {
             TRACER.get_mut().unwrap().increase_thread_depth();
@@ -139,14 +142,15 @@ impl TraceBlock {
             start: Instant::now(),
             event,
             size,
+            plug
         }
     }
 }
 
-fn monotonic_clock() -> Duration {
+fn monotonic_clock() -> u128 {
     use nix::time;
     let ts = time::clock_gettime(time::ClockId::CLOCK_MONOTONIC).unwrap();
-    Duration::from_nanos(ts.tv_sec() as u64 * 1_000_000_000 + ts.tv_nsec() as u64)
+    (ts.tv_sec() * 1_000_000_000 + ts.tv_nsec()) as u128
 }
 
 impl Drop for TraceBlock {
@@ -156,10 +160,11 @@ impl Drop for TraceBlock {
         let trace_event = TraceEvent {
             timestamp: self.start.duration_since(start),
             event: self.event,
-            end_timestamp: Some(monotonic_clock()),
+            end_timestamp: monotonic_clock(),
             // SAFETY: thread_depth() returns a number local to the current thread
             depth: unsafe { TRACER.get().unwrap().thread_depth() },
             size: Some(self.size),
+            plug: Some(self.plug)
         };
         // SAFETY: add_event and decrease_thread_depth access current thread only specific data
         unsafe {
@@ -178,8 +183,8 @@ macro_rules! trace_relative_point {
 
 #[macro_export]
 macro_rules! trace_relative_scoped {
-    ($event:expr, $size:expr) => {
-        let _trace_scoped = $crate::TraceBlock::new($event, $size);
+    ($event:expr, $size:expr, $plug:expr) => {
+        let _trace_scoped = $crate::TraceBlock::new($event, $size, $plug);
     };
 }
 

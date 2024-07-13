@@ -416,7 +416,6 @@ struct MemEpollHandler {
 
 impl MemEpollHandler {
     fn discard_memory_range(&self, offset: u64, size: u64) -> Result<(), Error> {
-        trace_relative_scoped!("discard_memory_range", size);
         // Use fallocate if the memory region is backed by a file.
         if let Some(fd) = self.host_fd {
             // SAFETY: FFI call with valid arguments
@@ -459,6 +458,7 @@ impl MemEpollHandler {
     fn state_change_request(&mut self, addr: u64, nb_blocks: u16, plug: bool) -> u16 {
         let mut config = self.config.lock().unwrap();
         let size: u64 = nb_blocks as u64 * config.block_size;
+        trace_relative_scoped!("state_chage_request", size, plug);
 
         if plug && (config.plugged_size + size > config.requested_size) {
             return VIRTIO_MEM_RESP_NACK;
