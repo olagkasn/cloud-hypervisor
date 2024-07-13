@@ -31,7 +31,9 @@ impl Tracer {
     fn end(&self) {
         let end = Instant::now();
         // SAFETY: FFI call
-        let path = format!("cloud-hypervisor-{}.virtio-mem-trace", unsafe { libc::getpid() });
+        let path = format!("cloud-hypervisor-{}.virtio-mem-trace", unsafe {
+            libc::getpid()
+        });
         let mut file = File::create(&path).unwrap();
 
         #[derive(Serialize)]
@@ -136,9 +138,15 @@ impl TraceBlock {
         Self {
             start: Instant::now(),
             event,
-            size
+            size,
         }
     }
+}
+
+fn monotonic_clock() -> Duration {
+    use nix::time;
+    let ts = time::clock_gettime(time::ClockId::CLOCK_MONOTONIC).unwrap();
+    Duration::from_nanos(ts.tv_sec() as u64 * 1_000_000_000 + ts.tv_nsec() as u64)
 }
 
 impl Drop for TraceBlock {
@@ -148,7 +156,7 @@ impl Drop for TraceBlock {
         let trace_event = TraceEvent {
             timestamp: self.start.duration_since(start),
             event: self.event,
-            end_timestamp: Some(Instant::now().duration_since(start)),
+            end_timestamp: Some(monotonic_clock()),
             // SAFETY: thread_depth() returns a number local to the current thread
             depth: unsafe { TRACER.get().unwrap().thread_depth() },
             size: Some(self.size),
