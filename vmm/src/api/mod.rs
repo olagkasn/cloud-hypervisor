@@ -52,6 +52,7 @@ use std::fmt::Display;
 use std::io;
 use std::sync::mpsc::{channel, RecvError, SendError, Sender};
 use std::sync::{Arc, Mutex};
+use tracer::trace_relative_scoped;
 use vm_migration::MigratableError;
 use vmm_sys_util::eventfd::EventFd;
 
@@ -1109,6 +1110,7 @@ impl ApiAction for VmResize {
     ) -> ApiRequest {
         Box::new(move |vmm| {
             info!("API request event: VmResize {:?}", resize_data);
+            trace_relative_scoped!("VmResize req", resize_data.desired_ram.unwrap_or(0), false);
 
             let response = vmm
                 .vm_resize(
@@ -1150,6 +1152,7 @@ impl ApiAction for VmResizeZone {
     ) -> ApiRequest {
         Box::new(move |vmm| {
             info!("API request event: VmResizeZone {:?}", resize_zone_data);
+            trace_relative_scoped!("VmResizeZone req", resize_zone_data.desired_ram, false);
 
             let response = vmm
                 .vm_resize_zone(resize_zone_data.id, resize_zone_data.desired_ram)
